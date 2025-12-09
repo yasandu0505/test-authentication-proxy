@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 # Configure via environment variables so the same code can be used across envs.
 BACKEND_URL = os.getenv("BACKEND_URL", "dfdf")
 SECURITY_HEADER_VALUE = os.getenv("SECURITY_HEADER_VALUE", "change-me")
+# Optional: inject a static bearer token for upstream calls (overrides caller Authorization).
+PROXY_BEARER_TOKEN = os.getenv("PROXY_BEARER_TOKEN")
 
 app = FastAPI(title="Authentication Proxy")
 
@@ -35,6 +37,10 @@ async def proxy(full_path: str, request: Request) -> Response:
 
     # Add required security header expected by the upstream service.
     headers["X-Security-Key"] = SECURITY_HEADER_VALUE
+
+    # If configured, enforce a proxy-managed bearer token instead of the caller's.
+    if PROXY_BEARER_TOKEN:
+        headers["Authorization"] = f"Bearer {PROXY_BEARER_TOKEN}"
 
     async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
         try:
